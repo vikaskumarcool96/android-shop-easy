@@ -92,7 +92,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun HomeScreen(navController: NavHostController) {
     val viewModel: HomeViewModel = viewModel()
-    val count = viewModel.count.value
+    val count = viewModel.getCartCount()
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -221,9 +221,15 @@ fun GridProductList(
                                 } else {
                                     MaterialTheme.colorScheme.primary
                                 }
-
+                                val isInCart = viewModel.cartItems.contains(product)
                                 Button(
-                                    onClick = {viewModel.incrementCount()},
+                                    onClick = {
+                                        if (!isInCart) {
+                                            viewModel.addToCart(product)
+                                        } else {
+                                            viewModel.removeFromCart(product)
+                                        }
+                                    },
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(30.dp),
@@ -249,7 +255,11 @@ fun GridProductList(
                                         )
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text(
-                                            text = "Add to Cart",
+                                            text = if (isInCart) {
+                                                "Added"
+                                            } else {
+                                                "Add to Cart"
+                                            },
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.Normal,
                                             color = Color.White
