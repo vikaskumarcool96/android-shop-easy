@@ -4,6 +4,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -42,12 +46,15 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -56,6 +63,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -66,6 +75,8 @@ import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import com.vikash.shopeasy.dto.Product
 import com.vikash.shopeasy.dto.sampleProducts
+import com.vikash.shopeasy.ui.CartScreen
+import com.vikash.shopeasy.ui.ShopTopBar
 import com.vikash.shopeasy.ui.theme.ShopEasyTheme
 import com.vikash.shopeasy.viewmodels.HomeViewModel
 
@@ -75,7 +86,6 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             ShopEasyTheme {
-
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.surfaceVariant
@@ -90,8 +100,7 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(navController: NavHostController) {
-    val viewModel: HomeViewModel = viewModel()
+fun HomeScreen(navController: NavHostController, viewModel: HomeViewModel) {
     val count = viewModel.getCartCount()
     Scaffold(
         topBar = {
@@ -111,9 +120,18 @@ fun HomeScreen(navController: NavHostController) {
                                 tint = MaterialTheme.colorScheme.onPrimary
                             )
                         }
+                        val scale = remember { Animatable(1f) }
+                        LaunchedEffect(count) {
+                            scale.animateTo(
+                                targetValue = 1.2f,
+                                animationSpec = tween(durationMillis = 150, easing = LinearOutSlowInEasing)
+                            )
+                            scale.animateTo(1f)
+                        }
                         if (count > 0) {
                             Box(
                                 modifier = Modifier
+                                    .scale(scale.value)
                                     .align(Alignment.TopEnd)
                                     .offset(x = (-4).dp, y = 2.dp)
                                     .size(16.dp)
@@ -214,58 +232,17 @@ fun GridProductList(
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
 
-                                val interactionSource = remember { MutableInteractionSource() }
-                                val isPressed = interactionSource.collectIsPressedAsState()
-                                val backgroundColor = if (isPressed.value) {
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
-                                } else {
-                                    MaterialTheme.colorScheme.primary
-                                }
-                                val isInCart = viewModel.cartItems.contains(product)
-                                Button(
-                                    onClick = {
-                                        if (!isInCart) {
-                                            viewModel.addToCart(product)
-                                        } else {
-                                            viewModel.removeFromCart(product)
-                                        }
-                                    },
+
+                                AddToCartButton(
+                                    product = product,
+                                    viewModel = viewModel,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(30.dp),
-                                    shape = RoundedCornerShape(16.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = backgroundColor),
-                                    interactionSource = interactionSource,
-                                    contentPadding = PaddingValues(
-                                        horizontal = 8.dp,
-                                        vertical = 0.dp
-                                    )
-
-                                ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.ShoppingCart,
-                                            contentDescription = "",
-                                            tint = Color.White,
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            text = if (isInCart) {
-                                                "Added"
-                                            } else {
-                                                "Add to Cart"
-                                            },
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Normal,
-                                            color = Color.White
-                                        )
-                                    }
-                                }
+                                        .height(30.dp)
+                                        .padding(0.dp),
+                                    iconSize = 14.dp,
+                                    textSize = 10.sp
+                                )
                                 Spacer(modifier = Modifier.height(8.dp))
                             }
                         }
@@ -275,44 +252,98 @@ fun GridProductList(
         )
     }
 }
+@Composable
+fun AddToCartButton(
+    product: Product?,
+    viewModel: HomeViewModel,
+    shape: RoundedCornerShape = RoundedCornerShape(16.dp),
+    modifier: Modifier,
+    iconSize: Dp,
+    textSize: TextUnit
+) {
+    val isInCart = viewModel.cartItems.contains(product)
+
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed = interactionSource.collectIsPressedAsState()
+    val targetColor = if (isInCart) Color.Gray else MaterialTheme.colorScheme.primary
+    val animatedColor by animateColorAsState(
+        targetValue = targetColor,
+        animationSpec = tween(300)
+    )
+    val backgroundColor = if (isPressed.value) {
+        animatedColor.copy(alpha = 0.75f)
+    } else {
+        animatedColor
+    }
+    Button(
+        onClick = {
+            if (!isInCart) {
+                product?.let { viewModel.addToCart(product) }
+            } else {
+                product?.let { viewModel.removeFromCart(product) }
+            }
+        },
+        modifier = modifier,
+        shape = shape,
+        colors = ButtonDefaults.buttonColors(containerColor = backgroundColor),
+        interactionSource = interactionSource,
+        contentPadding = PaddingValues(0.dp)
+
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.ShoppingCart,
+                contentDescription = "",
+                tint = Color.White,
+                modifier = Modifier.size(iconSize)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = if (isInCart) {
+                    "Added"
+                } else {
+                    "Add to Cart"
+                },
+                fontSize = textSize,
+                fontWeight = FontWeight.Normal,
+                color = Color.White
+            )
+        }
+    }
+}
 
 @Composable
 fun ShopEasyApp() {
     val navController = rememberNavController()
+    val viewModel: HomeViewModel = viewModel()
 
     NavHost(navController = navController, startDestination = "Home") {
         composable("home") {
-            HomeScreen(navController)
+            HomeScreen(navController, viewModel)
         }
         composable("detail") { backstackEntry ->
             val productFromNav =
                 navController.previousBackStackEntry?.savedStateHandle?.get<Product>("product");
             val product = remember { mutableStateOf(productFromNav) }
-            DetailScreen(product.value, { navController.popBackStack() })
+            DetailScreen(product.value, { navController.popBackStack() }, viewModel)
+        }
+        composable("cart") {
+             CartScreen(viewModel, { navController.popBackStack() })
+
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DetailScreen(product: Product?, onBackClick: () -> Unit) {
+fun DetailScreen(product: Product?, onBackClick: () -> Unit, viewModel: HomeViewModel) {
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { product?.productName?.let { Text(it) } },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                navigationIcon = {
-                    IconButton(onClick = { onBackClick() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                        )
-                    }
-                })
+            ShopTopBar(product?.productName?:"", onBackClick)
         },
         content = { padding ->
             Column(
@@ -390,26 +421,17 @@ fun DetailScreen(product: Product?, onBackClick: () -> Unit) {
                         }
                     }
                 }
-
-                Button(
-                    onClick = {},
+                AddToCartButton(
+                    product = product,
+                    viewModel = viewModel,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp)
                         .height(55.dp),
                     shape = RoundedCornerShape(50.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF00695C)
-                    )
-                ) {
-                    Icon(Icons.Default.ShoppingCart, contentDescription = "")
-                    Text(
-                        text = "Add to Cart",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
+                    iconSize = 24.dp,
+                    textSize = 18.sp
+                )
             }
 
         }
