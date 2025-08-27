@@ -113,7 +113,7 @@ fun HomeScreen(navController: NavHostController, viewModel: HomeViewModel) {
                 modifier = Modifier,
                 actions = {
                     Box(modifier = Modifier.padding(12.dp)) {
-                        IconButton(onClick = {}) {
+                        IconButton(onClick = { navController.navigate("cart") }) {
                             Icon(
                                 imageVector = Icons.Default.ShoppingCart,
                                 contentDescription = "Cart",
@@ -438,13 +438,6 @@ fun DetailScreen(product: Product?, onBackClick: () -> Unit, viewModel: HomeView
     )
 }
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
 
 @Preview(showBackground = true)
 @Composable
