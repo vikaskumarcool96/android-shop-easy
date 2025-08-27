@@ -31,6 +31,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -41,15 +42,19 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -79,6 +84,7 @@ import com.vikash.shopeasy.ui.CartScreen
 import com.vikash.shopeasy.ui.ShopTopBar
 import com.vikash.shopeasy.ui.theme.ShopEasyTheme
 import com.vikash.shopeasy.viewmodels.HomeViewModel
+import androidx.compose.runtime.collectAsState
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -124,7 +130,10 @@ fun HomeScreen(navController: NavHostController, viewModel: HomeViewModel) {
                         LaunchedEffect(count) {
                             scale.animateTo(
                                 targetValue = 1.2f,
-                                animationSpec = tween(durationMillis = 150, easing = LinearOutSlowInEasing)
+                                animationSpec = tween(
+                                    durationMillis = 150,
+                                    easing = LinearOutSlowInEasing
+                                )
                             )
                             scale.animateTo(1f)
                         }
@@ -151,7 +160,7 @@ fun HomeScreen(navController: NavHostController, viewModel: HomeViewModel) {
             )
         },
         content = { padding ->
-            GridProductList(sampleProducts, viewModel, padding, navController)
+            GridProductList(viewModel.searchedItems.collectAsState().value, viewModel, padding, navController)
         }
     )
 }
@@ -163,95 +172,128 @@ fun GridProductList(
     padding: PaddingValues,
     navController: NavHostController
 ) {
-    LazyVerticalStaggeredGrid(
-        contentPadding = PaddingValues(
-            top = padding.calculateTopPadding() + 16.dp,
-            bottom = padding.calculateBottomPadding(),
-            start = 16.dp,
-            end = 16.dp
-        ),
-        columns = StaggeredGridCells.Fixed(2)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                top = padding.calculateTopPadding() + 16.dp,
+                bottom = padding.calculateBottomPadding(),
+                start = 16.dp,
+                end = 16.dp
+            )
     ) {
-        items(
-            count = productList.size,
-            key = { index -> productList[index].id },
-            contentType = { index -> productList[index]::class },
-            itemContent = { index ->
-                val product = productList[index]
-                Box(
-                    modifier = Modifier.fillMaxWidth(0.5f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        elevation = CardDefaults.cardElevation(4.dp),
-                        colors = CardDefaults.cardColors(contentColor = Color.White),
-                        onClick = {
-                            navController.currentBackStackEntry?.savedStateHandle?.set(
-                                "product",
-                                product
-                            )
-                            navController.navigate("detail")
-                        }
+        SearchTextField(viewModel)
+        LazyVerticalStaggeredGrid(
+            columns = StaggeredGridCells.Fixed(2)
+        ) {
+            items(
+                count = productList.size,
+                key = { index -> productList[index].id },
+                contentType = { index -> productList[index]::class },
+                itemContent = { index ->
+                    val product = productList[index]
+                    Box(
+                        modifier = Modifier.fillMaxWidth(0.5f),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column {
-                            AsyncImage(
-                                model = product.productImage,
-                                contentDescription = "product Image",
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .aspectRatio(1.5f)
-                                    .clip(RoundedCornerShape(8.dp, 8.dp, 0.dp, 0.dp))
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Column(modifier = Modifier.padding(horizontal = 8.dp)) {
-                                Text(
-                                    text = product.productName,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF323232)
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            elevation = CardDefaults.cardElevation(4.dp),
+                            colors = CardDefaults.cardColors(contentColor = Color.White),
+                            onClick = {
+                                navController.currentBackStackEntry?.savedStateHandle?.set(
+                                    "product",
+                                    product
                                 )
-                                Text(
-                                    text = product.price,
-                                    fontSize = 14.sp,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = Color(0xFF00796B)
-                                )
-
-                                Text(
-                                    text = product.description,
-                                    fontSize = 12.sp,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.Gray,
-                                    minLines = 2,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-
-
-                                AddToCartButton(
-                                    product = product,
-                                    viewModel = viewModel,
+                                navController.navigate("detail")
+                            }
+                        ) {
+                            Column {
+                                AsyncImage(
+                                    model = product.productImage,
+                                    contentDescription = "product Image",
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(30.dp)
-                                        .padding(0.dp),
-                                    iconSize = 14.dp,
-                                    textSize = 10.sp
+                                        .aspectRatio(1.5f)
+                                        .clip(RoundedCornerShape(8.dp, 8.dp, 0.dp, 0.dp))
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Column(modifier = Modifier.padding(horizontal = 8.dp)) {
+                                    Text(
+                                        text = product.productName,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF323232)
+                                    )
+                                    Text(
+                                        text = product.price,
+                                        fontSize = 14.sp,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = Color(0xFF00796B)
+                                    )
+
+                                    Text(
+                                        text = product.description,
+                                        fontSize = 12.sp,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color.Gray,
+                                        minLines = 2,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+
+                                    AddToCartButton(
+                                        product = product,
+                                        viewModel = viewModel,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(30.dp)
+                                            .padding(0.dp),
+                                        iconSize = 14.dp,
+                                        textSize = 10.sp
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                }
                             }
                         }
                     }
                 }
-            }
-        )
+            )
+        }
     }
 }
+
+@Composable
+fun SearchTextField(viewModel: HomeViewModel) {
+    // Implementation of SearchTextField UI goes here
+
+    OutlinedTextField(
+        value = viewModel.searchQuery.collectAsState().value,
+        onValueChange = { newTextValue -> viewModel.getSearchedItems(newTextValue) },
+        placeholder = { Text("Search products...") },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = "Search",
+                tint = Color.Gray
+            )
+        },
+        shape = RoundedCornerShape(12.dp),
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = Color(0xFFF5F5F5),
+            unfocusedContainerColor = Color(0xFFF5F5F5),
+
+        )
+    )
+}
+
 @Composable
 fun AddToCartButton(
     product: Product?,
@@ -332,7 +374,7 @@ fun ShopEasyApp() {
             DetailScreen(product.value, { navController.popBackStack() }, viewModel)
         }
         composable("cart") {
-             CartScreen(viewModel, { navController.popBackStack() })
+            CartScreen(viewModel, { navController.popBackStack() })
 
         }
     }
@@ -343,7 +385,7 @@ fun ShopEasyApp() {
 fun DetailScreen(product: Product?, onBackClick: () -> Unit, viewModel: HomeViewModel) {
     Scaffold(
         topBar = {
-            ShopTopBar(product?.productName?:"", onBackClick)
+            ShopTopBar(product?.productName ?: "", onBackClick)
         },
         content = { padding ->
             Column(
