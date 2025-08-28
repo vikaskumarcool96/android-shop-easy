@@ -8,6 +8,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -31,6 +32,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Button
@@ -42,6 +45,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -160,7 +164,12 @@ fun HomeScreen(navController: NavHostController, viewModel: HomeViewModel) {
             )
         },
         content = { padding ->
-            GridProductList(viewModel.searchedItems.collectAsState().value, viewModel, padding, navController)
+            GridProductList(
+                viewModel.searchedItems.collectAsState().value,
+                viewModel,
+                padding,
+                navController
+            )
         }
     )
 }
@@ -247,16 +256,34 @@ fun GridProductList(
                                     Spacer(modifier = Modifier.height(8.dp))
 
 
-                                    AddToCartButton(
-                                        product = product,
-                                        viewModel = viewModel,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(30.dp)
-                                            .padding(0.dp),
-                                        iconSize = 14.dp,
-                                        textSize = 10.sp
-                                    )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        AddToCartButton(
+                                            product = product,
+                                            viewModel = viewModel,
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .height(25.dp)
+                                                .padding(0.dp),
+                                            iconSize = 14.dp,
+                                            textSize = 10.sp,
+                                            text = "Cart"
+                                        )
+                                        WishlistButton(
+                                            product = product,
+                                            viewModel = viewModel,
+                                            modifier = Modifier
+                                                .padding(0.dp)
+                                                .weight(1f)
+                                                .height(25.dp),
+                                            iconSize = 14.dp,
+                                            textSize = 10.sp,
+                                            textWhenNotWished = "Wish",
+                                            textWhenWished = "Wished"
+                                        )
+                                    }
                                     Spacer(modifier = Modifier.height(8.dp))
                                 }
                             }
@@ -277,7 +304,9 @@ fun SearchTextField(viewModel: HomeViewModel) {
         onValueChange = { newTextValue -> viewModel.getSearchedItems(newTextValue) },
         placeholder = { Text("Search products...") },
         singleLine = true,
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
         leadingIcon = {
             Icon(
                 imageVector = Icons.Default.Search,
@@ -290,7 +319,7 @@ fun SearchTextField(viewModel: HomeViewModel) {
             focusedContainerColor = Color(0xFFF5F5F5),
             unfocusedContainerColor = Color(0xFFF5F5F5),
 
-        )
+            )
     )
 }
 
@@ -301,7 +330,8 @@ fun AddToCartButton(
     shape: RoundedCornerShape = RoundedCornerShape(16.dp),
     modifier: Modifier,
     iconSize: Dp,
-    textSize: TextUnit
+    textSize: TextUnit,
+    text: String = "Add to Cart"
 ) {
     val isInCart = viewModel.cartItems.contains(product)
 
@@ -348,13 +378,56 @@ fun AddToCartButton(
                 text = if (isInCart) {
                     "Added"
                 } else {
-                    "Add to Cart"
+                    text
                 },
                 fontSize = textSize,
                 fontWeight = FontWeight.Normal,
                 color = Color.White
             )
         }
+    }
+}
+
+@Composable
+fun WishlistButton(
+    product: Product?,
+    viewModel: HomeViewModel,
+    shape: RoundedCornerShape = RoundedCornerShape(16.dp),
+    modifier: Modifier,
+    iconSize: Dp,
+    textSize: TextUnit,
+    textWhenNotWished: String = "Add To Wishlist",
+    textWhenWished: String = "Remove from Wishlist"
+) {
+    OutlinedButton(
+        onClick = {viewModel.addOrRemoveFromWishlist(product)},
+        modifier = modifier,
+        shape = shape,
+        contentPadding = PaddingValues(0.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+    ) {
+        val icon = if (viewModel.wishlistItems.contains(product)) {
+            Icons.Default.Favorite
+        } else {
+            Icons.Default.FavoriteBorder
+        }
+        Icon(
+            imageVector = icon,
+            contentDescription = "wish",
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(iconSize)
+        )
+        val text = if (viewModel.wishlistItems.contains(product)) {
+            textWhenWished
+        } else {
+            textWhenNotWished
+        }
+        Text(
+            text = text,
+            fontSize = textSize,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
     }
 }
 
@@ -463,17 +536,29 @@ fun DetailScreen(product: Product?, onBackClick: () -> Unit, viewModel: HomeView
                         }
                     }
                 }
-                AddToCartButton(
-                    product = product,
-                    viewModel = viewModel,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .height(55.dp),
-                    shape = RoundedCornerShape(50.dp),
-                    iconSize = 24.dp,
-                    textSize = 18.sp
-                )
+                Column {
+                    AddToCartButton(
+                        product = product,
+                        viewModel = viewModel,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .height(55.dp),
+                        shape = RoundedCornerShape(50.dp),
+                        iconSize = 24.dp,
+                        textSize = 18.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    WishlistButton(
+                        product = product,
+                        viewModel = viewModel,
+                        modifier = Modifier
+                            .fillMaxWidth().padding(16.dp).height(55.dp),
+                        shape = RoundedCornerShape(50.dp),
+                        iconSize = 24.dp,
+                        textSize = 18.sp,
+                    )
+                }
             }
 
         }

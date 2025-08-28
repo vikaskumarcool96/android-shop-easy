@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 class HomeViewModel : ViewModel() {
 
     val cartItems = mutableStateListOf<Product>()
+    val wishlistItems = mutableStateListOf<Product>()
     val products = mutableStateListOf(*sampleProducts.toTypedArray())
     private val _searchQuery = MutableStateFlow("")
     private val _searchedItems =MutableStateFlow(sampleProducts)
@@ -34,6 +35,14 @@ class HomeViewModel : ViewModel() {
             sampleProducts
         } else {
             sampleProducts.filter { it.productName.contains(query, ignoreCase = true) }
+        }
+    }
+
+    fun addOrRemoveFromWishlist(product: Product?) {
+        if (wishlistItems.contains(product)) {
+            wishlistItems.remove(product)
+        } else {
+            product?.let { wishlistItems.add(it) }
         }
     }
 }
